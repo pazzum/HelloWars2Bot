@@ -26,17 +26,22 @@ class DecisionMaker
      */
     public function make(BattlefieldInfo $battlefieldInfo, $config) {
         $possibleMoves = $this->getPossibleMoves($battlefieldInfo, $config);
-        $profitableMoves = $this->rateMoves($possibleMoves, $battlefieldInfo, $config);
-        return $this->getBestMove($profitableMoves);
+        $rankedMoves = $this->rateMoves($possibleMoves, $battlefieldInfo, $config);
+        return $this->getBestMove($rankedMoves);
     }
 
     /**
-     * @param BotMove[] $ratedMoves
+     * @param array $ratedMoves
      * @return BotMove
      */
     public function getBestMove(array $ratedMoves) {
-        krsort($ratedMoves);
-        return reset($ratedMoves);
+        usort($ratedMoves, function ($item1, $item2) {
+            return $item2['rate'] <=> $item1['rate'];
+        });
+
+        $profitableMoves = array_column($ratedMoves, 'possibleMove');
+
+        return reset($profitableMoves);
     }
 
     /**
@@ -366,7 +371,6 @@ class DecisionMaker
         $ratedMoves = array();
 
         foreach ($possibleMoves as $possibleMove) {
-
             $rate = 0;
 
             $rate += $this->rateMovement(
@@ -388,9 +392,10 @@ class DecisionMaker
              //przeciwnik jest tylko 1 lbu 2 obszarze na ktorym jest bomba i jest najkrotsza droga
              //nikogo nie ma i jest destroyable
 
-            $rateInt = intval($rate*1000);
-
-            $ratedMoves[$rateInt] = $possibleMove;
+            $ratedMoves[] = array(
+                'rate' => $rate,
+                'possibleMove' => $possibleMove
+            );
         }
 
         //delete with 0 rate
